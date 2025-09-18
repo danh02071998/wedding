@@ -242,6 +242,11 @@
   <!-- <link rel="dns-prefetch" href="//cdn.jsdelivr.net" /> -->
   <!-- <link rel="dns-prefetch" href="//use.fontawesome.com" /> -->
   <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+  <!-- Preload critical images for faster loading -->
+  <link rel="preload" as="image" href="./anh/TRUY6303.jpg" />
+  <link rel="preload" as="image" href="JPEG/TRUY6188.jpg" />
+  <link rel="preload" as="image" href="JPEG/TRUY6339.jpg" />
+
   <link rel="prefetch"
     href="js/chunk.countup.fe2c1016.js" />
   <link rel="prefetch"
@@ -324,6 +329,20 @@
 
     .bg-loaded {
       opacity: 1;
+    }
+
+    /* Optimized image loading */
+    .img-inner img {
+      transition: opacity 0.2s ease;
+    }
+
+    .img-inner img[style*="opacity:0"] {
+      background: linear-gradient(135deg, #f8f4e6 0%, #fff8e7 50%, #f5f0d8 100%);
+    }
+
+    /* Preload animation delay */
+    [data-animate-delay="300"] {
+      animation-delay: 0.3s;
     }
   </style>
   <!--[if IE]><link rel="stylesheet" type="text/css" href="assets/css/themes/flatsome/assets/css/ie-fallback.css"><script src="js/html5shiv.js"></script><script>var head = document.getElementsByTagName('head')[0],style = document.createElement('style');style.type = 'text/css';style.styleSheet.cssText = ':before,:after{content:none !important';head.appendChild(style);setTimeout(function(){head.removeChild(style);}, 0);</script><script src="js/ie-flexibility.js"></script><![endif]-->
@@ -821,6 +840,11 @@
 
           #banner-1221863429 .bg.bg-loaded {
             background-image: url(./anh/TRUY6303.jpg);
+          }
+
+          #banner-1221863429 .bg {
+            background-color: #f8f4e6;
+            background-image: linear-gradient(135deg, #f8f4e6 0%, #fff8e7 50%, #f5f0d8 100%);
           }
 
           #banner-1221863429 .overlay {
@@ -1356,14 +1380,13 @@
             <div id="col-1942047612" class="col medium-4 small-12 large-4">
               <div class="col-inner text-center">
                 <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_563048948">
-                  <div data-animate="fadeInLeft">
+                  <div data-animate="fadeInLeft" data-animate-delay="300">
                     <div class="img-inner dark">
                       <img decoding="async" width="500" height="700"
                         src="JPEG/TRUY6188.jpg"
-                        data-src="JPEG/TRUY6188.jpg"
-                        class="lazy-load attachment-original size-original" alt srcset
-                        data-srcset="JPEG/TRUY6188.jpg 500w"
-                        sizes="(max-width: 500px) 100vw, 500px" />
+                        class="attachment-original size-original" alt
+                        onload="this.style.opacity=1"
+                        style="opacity:0;transition:opacity 0.5s ease;" />
                     </div>
                   </div>
                   <style>
@@ -1437,14 +1460,13 @@
             <div id="col-1037177677" class="col medium-4 small-12 large-4">
               <div class="col-inner text-center">
                 <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1728279608">
-                  <div data-animate="fadeInRight">
+                  <div data-animate="fadeInRight" data-animate-delay="300">
                     <div class="img-inner dark">
                       <img decoding="async" width="500" height="700"
                         src="JPEG/TRUY6339.jpg"
-                        data-src="JPEG/TRUY6339.jpg"
-                        class="lazy-load attachment-original size-original" alt srcset
-                        data-srcset="JPEG/TRUY6339.jpg 500w"
-                        sizes="(max-width: 500px) 100vw, 500px" />
+                        class="attachment-original size-original" alt
+                        onload="this.style.opacity=1"
+                        style="opacity:0;transition:opacity 0.5s ease;" />
                     </div>
                   </div>
                   <style>
