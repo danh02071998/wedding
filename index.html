@@ -13,32 +13,245 @@
   <title>Wedding Invitation Minh Huy & Thuý An</title>
   <link rel="canonical" href="https://thiepcuoionline.net" />
   <meta property="og:locale" content="vi_VN" />
+  
+  <!-- Guest Name Loading Script -->
+  <script>
+    class GuestNameHandler {
+      constructor() {
+        // Embedded guest data - easier to maintain and works with file:// protocol
+        this.guestData = new Map([
+          ['daniel', 'Hoàng Danh'],
+          ['john', 'Nguyễn Văn An'],
+          ['mary', 'Trần Thị Bình'],
+          ['peter', 'Lê Văn Cường'],
+          ['anna', 'Phạm Thị Dung'],
+          ['michael', 'Võ Minh Tuấn'],
+          ['sarah', 'Nguyễn Thị Lan'],
+          ['david', 'Trần Văn Đức'],
+          ['lisa', 'Lê Thị Mai'],
+          ['robert', 'Phạm Văn Nam']
+        ]);
+        
+        this.isLoaded = true;
+        this.init();
+      }
+      
+      async init() {
+        try {
+          this.updateGuestName();
+        } catch (error) {
+          console.warn('Guest name handler initialization failed:', error);
+        }
+      }
+      
+      // Alternative method: Try to load from external file first, fall back to embedded data
+      async loadFromFileWithFallback() {
+        try {
+          // Only try to fetch if we're not on file:// protocol
+          if (window.location.protocol !== 'file:') {
+            const response = await fetch('guests.txt');
+            
+            if (response.ok) {
+              const text = await response.text();
+              this.parseGuestDataFromFile(text);
+              console.log('Guest data loaded from external file');
+              return true;
+            }
+          }
+        } catch (error) {
+          console.log('External file not available, using embedded data');
+        }
+        
+        console.log('Using embedded guest data');
+        return false;
+      }
+      
+      parseGuestDataFromFile(text) {
+        this.guestData.clear();
+        const lines = text.split('\n');
+        
+        lines.forEach((line, index) => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine.startsWith('#')) {
+            return; // Skip empty lines and comments
+          }
+          
+          const equalIndex = trimmedLine.indexOf('=');
+          if (equalIndex === -1) {
+            console.warn(`Invalid format on line ${index + 1}: ${trimmedLine}`);
+            return;
+          }
+          
+          const code = trimmedLine.substring(0, equalIndex).trim();
+          const name = trimmedLine.substring(equalIndex + 1).trim();
+          
+          if (code && name) {
+            this.guestData.set(code.toLowerCase(), name);
+          }
+        });
+      }
+      
+      getGuestCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const guestCode = urlParams.get('g');
+        return guestCode ? guestCode.toLowerCase().trim() : null;
+      }
+      
+      getGuestName(code) {
+        return this.guestData.get(code) || null;
+      }
+      
+      updateGuestName() {
+        const guestCode = this.getGuestCode();
+        
+        if (!guestCode) {
+          console.log('No guest code provided in URL');
+          return;
+        }
+        
+        const guestName = this.getGuestName(guestCode);
+        
+        if (!guestName) {
+          console.warn(`Guest not found for code: ${guestCode}`);
+          return;
+        }
+        
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => this.replaceGuestName(guestName));
+        } else {
+          this.replaceGuestName(guestName);
+        }
+      }
+      
+      replaceGuestName(guestName) {
+        const guestElement = document.getElementById('guest-name');
+        
+        if (guestElement) {
+          // Store original content for potential restoration
+          if (!guestElement.dataset.originalContent) {
+            guestElement.dataset.originalContent = guestElement.innerHTML;
+          }
+          
+          // Replace with guest name while maintaining styling
+          guestElement.innerHTML = `<em><strong>${this.escapeHtml(guestName)}</strong></em>`;
+          
+          console.log(`Guest name updated to: ${guestName}`);
+          
+          // Add a class for potential CSS styling
+          guestElement.classList.add('personalized-guest');
+        } else {
+          console.error('Guest name element not found');
+        }
+      }
+      
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+      
+      // Method to add new guests programmatically
+      addGuest(code, name) {
+        this.guestData.set(code.toLowerCase(), name);
+        console.log(`Added guest: ${code} → ${name}`);
+      }
+      
+      // Method to remove guests
+      removeGuest(code) {
+        const removed = this.guestData.delete(code.toLowerCase());
+        if (removed) {
+          console.log(`Removed guest: ${code}`);
+        }
+        return removed;
+      }
+      
+      // Method to get all guests
+      getAllGuests() {
+        return Array.from(this.guestData.entries()).map(([code, name]) => ({ code, name }));
+      }
+      
+      // Debug method to check current status
+      getStatus() {
+        return {
+          isLoaded: this.isLoaded,
+          totalGuests: this.guestData.size,
+          currentGuestCode: this.getGuestCode(),
+          currentGuestName: this.getGuestCode() ? this.getGuestName(this.getGuestCode()) : null,
+          allGuests: this.getAllGuests()
+        };
+      }
+    }
+    
+    // Initialize the guest name handler
+    let guestHandler;
+    
+    // Initialize when script loads
+    (() => {
+      guestHandler = new GuestNameHandler();
+      
+      // Try to load from external file as well (for server environments)
+      guestHandler.loadFromFileWithFallback();
+      
+      // Make it available globally for debugging
+      window.guestHandler = guestHandler;
+    })();
+  </script>
+  
+  <!-- CSS for personalized guest names -->
+  <style>
+    .personalized-guest {
+      animation: fadeInGlow 1.5s ease-in-out;
+      transition: all 0.3s ease;
+    }
+    
+    .personalized-guest:hover {
+      transform: scale(1.05);
+      text-shadow: 2px 2px 4px rgba(153, 51, 0, 0.3);
+    }
+    
+    @keyframes fadeInGlow {
+      0% {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      50% {
+        opacity: 0.7;
+        text-shadow: 0 0 10px rgba(153, 51, 0, 0.5);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+        text-shadow: none;
+      }
+    }
+  </style>
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Wedding Invitation Minh Huy &amp; Thuý An" />
   <meta property="og:url" content="https://thiepcuoionline.net/trung-hieu-hong-ngoc/" />
   <meta property="og:site_name" content="Thiệp Cưới Online" />
   <meta property="article:modified_time" content="2024-07-26T08:28:57+00:00" />
   <meta property="og:image"
-    content="https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n.jpg" />
+    content="down-anh/337379080_516820773756682_9195336347623394497_n.jpg" />
   <meta property="og:image:width" content="2048" />
   <meta property="og:image:height" content="1365" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta name="twitter:card" content="summary_large_image" />
   <script type="application/ld+json"
     class="yoast-schema-graph">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/","url":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/","name":"Wedding Invitation Trung Hiếu & Hồng Ngọc","isPartOf":{"@id":"https://thiepcuoionline.net/#website"},"primaryImageOfPage":{"@id":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/#primaryimage"},"image":{"@id":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/#primaryimage"},"thumbnailUrl":"https://chinhhuongwedding.thiepcuoionline.net/wp-content/themes/flatsome-child/img/khach-nha-trai-no.png","datePublished":"2024-05-23T02:37:09+00:00","dateModified":"2024-07-26T08:28:57+00:00","breadcrumb":{"@id":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/#breadcrumb"},"inLanguage":"vi","potentialAction":[{"@type":"ReadAction","target":["https://thiepcuoionline.net/trung-hieu-hong-ngoc/"]}]},{"@type":"ImageObject","inLanguage":"vi","@id":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/#primaryimage","url":"https://chinhhuongwedding.thiepcuoionline.net/wp-content/themes/flatsome-child/img/khach-nha-trai-no.png","contentUrl":"https://chinhhuongwedding.thiepcuoionline.net/wp-content/themes/flatsome-child/img/khach-nha-trai-no.png"},{"@type":"BreadcrumbList","@id":"https://thiepcuoionline.net/trung-hieu-hong-ngoc/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"Trang chủ","item":"https://thiepcuoionline.net/"},{"@type":"ListItem","position":2,"name":"Trung Hiếu &#038; Hồng Ngọc"}]},{"@type":"WebSite","@id":"https://thiepcuoionline.net/#website","url":"https://thiepcuoionline.net/","name":"Thiệp Cưới Online","description":"Dịch vụ thiết kế Thiệp Cưới Online trọn gói","potentialAction":[{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://thiepcuoionline.net/?s={search_term_string}"},"query-input":"required name=search_term_string"}],"inLanguage":"vi"}]}</script>
-  <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
-  <link rel="dns-prefetch" href="//use.fontawesome.com" />
+  <!-- <link rel="dns-prefetch" href="//cdn.jsdelivr.net" /> -->
+  <!-- <link rel="dns-prefetch" href="//use.fontawesome.com" /> -->
   <link rel="dns-prefetch" href="//fonts.googleapis.com" />
   <link rel="prefetch"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/js/chunk.countup.fe2c1016.js" />
+    href="js/chunk.countup.fe2c1016.js" />
   <link rel="prefetch"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/js/chunk.sticky-sidebar.a58a6557.js" />
+    href="js/chunk.sticky-sidebar.a58a6557.js" />
   <link rel="prefetch"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/js/chunk.tooltips.29144c1c.js" />
+    href="js/chunk.tooltips.29144c1c.js" />
   <link rel="prefetch"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/js/chunk.vendors-popups.947eca5c.js" />
+    href="js/chunk.vendors-popups.947eca5c.js" />
   <link rel="prefetch"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/js/chunk.vendors-slider.c7f2bd49.js" />
+    href="js/chunk.vendors-slider.c7f2bd49.js" />
   <style id="classic-theme-styles-inline-css" type="text/css">
     /*! This file is auto-generated */
     .wp-block-button__link {
@@ -65,23 +278,23 @@
     href="wp-content/plugins/ar-contactus/res/css/generated-desktop.css" type="text/css" media="all" />
   <link rel="stylesheet" id="contactus.fa.css-css" href="releases/v5.8.1/css/all.css" type="text/css" media="all" />
   <link rel="stylesheet" id="flatsome-main-css"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/flatsome.css?ver=3.15.7" type="text/css"
+    href="assets/css/themes/flatsome/assets/css/flatsome.css" type="text/css"
     media="all" />
   <style id="flatsome-main-inline-css" type="text/css">
     @font-face {
       font-family: "fl-icons";
       font-display: block;
-      src: url(https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/icons/fl-icons.eot?v=3.15.7);
+      src: url(assets/css/themes/flatsome/assets/css/icons/fl-icons.eot);
       src:
-        url(https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/icons/fl-icons.eot#iefix?v=3.15.7) format("embedded-opentype"),
-        url(https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/icons/fl-icons.woff2?v=3.15.7) format("woff2"),
-        url(https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/icons/fl-icons.ttf?v=3.15.7) format("truetype"),
-        url(https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/icons/fl-icons.woff?v=3.15.7) format("woff"),
-        url(https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/icons/fl-icons.svg?v=3.15.7#fl-icons) format("svg");
+        url(assets/css/themes/flatsome/assets/css/icons/fl-icons.eot#iefix) format("embedded-opentype"),
+        url(assets/css/themes/flatsome/assets/css/icons/fl-icons.woff2) format("woff2"),
+        url(assets/css/themes/flatsome/assets/css/icons/fl-icons.ttf) format("truetype"),
+        url(assets/css/themes/flatsome/assets/css/icons/fl-icons.woff) format("woff"),
+        url(assets/css/themes/flatsome/assets/css/icons/fl-icons.svg#fl-icons) format("svg");
     }
   </style>
   <link rel="stylesheet" id="flatsome-style-css"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome-child/style.css?ver=3.0" type="text/css" media="all" />
+    href="assets/css/themes/flatsome-child/style.css" type="text/css" media="all" />
   <link rel="stylesheet" id="flatsome-googlefonts-css"
     href="//fonts.googleapis.com/css?family=Questrial%3Aregular%2Cregular%2Cregular%2Cregular%7CDancing+Script%3Aregular%2C400&#038;display=swap&#038;ver=3.9"
     type="text/css" media="all" />
@@ -91,17 +304,17 @@
     /* ]]> */
   </script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/plugins/ar-contactus/res/js/contactus.min.js?ver=2.2.6"
+    src="assets/js/plugins/ar-contactus/res/js/contactus.min.js"
     id="contactus-js"></script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/plugins/ar-contactus/res/js/scripts.js?ver=2.2.6"
+    src="assets/js/plugins/ar-contactus/res/js/scripts.js"
     id="contactus.scripts-js"></script>
-  <script type="text/javascript" src="https://thiepcuoionline.net/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"
+  <script type="text/javascript" src="js/jquery.min.js"
     id="jquery-core-js"></script>
-  <link rel="https://api.w.org/" href="https://thiepcuoionline.net/wp-json-v9/" />
-  <link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://thiepcuoionline.net/xmlrpc.php?rsd" />
+  <!-- <link rel="https://api.w.org/" href="https://thiepcuoionline.net/wp-json-v9/" /> -->
+  <!-- <link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://thiepcuoionline.net/xmlrpc.php?rsd" /> -->
   <meta name="generator" content="WordPress 6.4.1" />
-  <link rel="shortlink" href="https://thiepcuoionline.net/?p=10754" />
+  <!-- <link rel="shortlink" href="https://thiepcuoionline.net/?p=10754" /> -->
   <style>
     .bg {
       opacity: 0;
@@ -113,15 +326,15 @@
       opacity: 1;
     }
   </style>
-  <!--[if IE]><link rel="stylesheet" type="text/css" href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/ie-fallback.css"><script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.6.1/html5shiv.js"></script><script>var head = document.getElementsByTagName('head')[0],style = document.createElement('style');style.type = 'text/css';style.styleSheet.cssText = ':before,:after{content:none !important';head.appendChild(style);setTimeout(function(){head.removeChild(style);}, 0);</script><script src="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/libs/ie-flexibility.js"></script><![endif]-->
-  <link rel="icon" href="https://thiepcuoionline.net/wp-content/uploads/2023/02/cropped-wedding-ring-32x32.png"
+  <!--[if IE]><link rel="stylesheet" type="text/css" href="assets/css/themes/flatsome/assets/css/ie-fallback.css"><script src="js/html5shiv.js"></script><script>var head = document.getElementsByTagName('head')[0],style = document.createElement('style');style.type = 'text/css';style.styleSheet.cssText = ':before,:after{content:none !important';head.appendChild(style);setTimeout(function(){head.removeChild(style);}, 0);</script><script src="js/ie-flexibility.js"></script><![endif]-->
+  <link rel="icon" href="down-anh/cropped-wedding-ring-32x32.png"
     sizes="32x32" />
-  <link rel="icon" href="https://thiepcuoionline.net/wp-content/uploads/2023/02/cropped-wedding-ring-192x192.png"
+  <link rel="icon" href="down-anh/cropped-wedding-ring-192x192.png"
     sizes="192x192" />
   <link rel="apple-touch-icon"
-    href="https://thiepcuoionline.net/wp-content/uploads/2023/02/cropped-wedding-ring-180x180.png" />
+    href="down-anh/cropped-wedding-ring-180x180.png" />
   <meta name="msapplication-TileImage"
-    content="https://thiepcuoionline.net/wp-content/uploads/2023/02/cropped-wedding-ring-270x270.png" />
+    content="down-anh/cropped-wedding-ring-270x270.png" />
   <style id="custom-css" type="text/css">
     :root {
       --primary-color: #f30000;
@@ -271,7 +484,6 @@
     .nav-line-bottom>li>a:before,
     .nav-line-grow>li>a:before,
     .nav-line>li>a:before,
-    .banner,
     .header-top,
     .slider-nav-circle .flickity-prev-next-button:hover svg,
     .slider-nav-circle .flickity-prev-next-button:hover .arrow,
@@ -283,6 +495,10 @@
     input[type='button'].primary,
     .badge-inner {
       background-color: #f30000;
+    }
+
+    .banner {
+      background-color: white;
     }
 
     /* Border */
@@ -514,7 +730,7 @@
   class="page-template page-template-page-blank-landingpage page-template-page-blank-landingpage-php page page-id-10754 lightbox nav-dropdown-has-arrow nav-dropdown-has-shadow nav-dropdown-has-border">
   <div id="wrapper">
     <div id="main" class>
-      <div class="banner has-hover hide-for-small" id="banner-1691967926">
+      <div class="banner has-hover hide-for-small" id="banner-1691967926" style="background-color:#fff">
         <div class="banner-inner fill">
           <div class="banner-bg fill">
             <div class="bg fill bg-fill "></div>
@@ -545,7 +761,7 @@
           }
 
           #banner-1691967926 .bg.bg-loaded {
-            background-image: url(https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n.jpg);
+            background-image: url(./anh/ab.jpg);
           }
 
           #banner-1691967926 .overlay {
@@ -604,7 +820,7 @@
           }
 
           #banner-1221863429 .bg.bg-loaded {
-            background-image: url(https://thiepcuoionline.net/wp-content/uploads/2024/06/337545936_994542398598179_1556616276137603008_n.jpg);
+            background-image: url(./anh/TRUY6303.jpg);
           }
 
           #banner-1221863429 .overlay {
@@ -703,12 +919,9 @@
                   <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1543293360">
                     <div data-animate="fadeInDown">
                       <div class="img-inner image-cover dark" style="padding-top:170%;">
-                        <img decoding="async" width="600" height="900"
-                          src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20600%20900%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                          data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n.jpg"
-                          class="lazy-load attachment-original size-original" alt srcset
-                          data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n.jpg 600w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n-200x300.jpg 200w"
-                          sizes="(max-width: 600px) 100vw, 600px" />
+                                                <img decoding="async" width="600" height="900"
+                          src="./anh/TRUY6178.jpg"
+                          />
                       </div>
                     </div>
                     <style>
@@ -739,9 +952,9 @@
                       <div class="img-inner dark">
                         <img decoding="async" width="904" height="292"
                           src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20904%20292%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                          data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-10.png"
+                          data-src="down-anh/Timeline-ngang-tung-son-Recovered-10.png"
                           class="lazy-load attachment-original size-original" alt srcset
-                          data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-10.png 904w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-10-300x97.png 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-10-768x248.png 768w"
+                          data-srcset="down-anh/Timeline-ngang-tung-son-Recovered-10.png 904w"
                           sizes="(max-width: 904px) 100vw, 904px" />
                       </div>
                     </div>
@@ -757,7 +970,7 @@
                       }
                     </style>
                   </div>
-                  <p style="text-align: center;"><span style="font-size: 115%; color: #993300;"><em><strong>Quý
+                  <p style="text-align: center;"><span id="guest-name" style="font-size: 115%; color: #993300;"><em><strong>Quý
                           khách</strong></em></span></p>
                   <p style="text-align: center;"><span style="font-size: 90%; color: #000000;"><strong>ĐẾN DỰ BUỔI TIỆC
                         THÂN MẬT <br />CHUNG VUI CÙNG GIA ĐÌNH CHÚNG TÔI</strong></span></p>
@@ -772,7 +985,7 @@
                         TRƯỞNG NỮ &amp; TRƯỞNG NAM
                       </div>
                       <div style="font-family:'Great Vibes',cursive;font-size:3.2em;color:#222;line-height:1.1;">
-                        Trần Minh Huy
+                        Hồ Minh Huy
                       </div>
                     </div>
                     <style>
@@ -793,93 +1006,259 @@
                           style="font-size: 80%;">TẠI NHÀ RIÊNG</span><br /><span
                           style="font-size: 130%; color: #993300;">Xã Mỹ Hoà Hưng</span><br /></strong></span></h5>
                   <h5 style="text-align: center;">Long Xuyên, An Giang</h5>
-                  <div class="date-display-container" id="date_display_custom">
-                    <div class="date-header">THỨ NĂM</div>
-                    <div class="date-main">
-                      <span class="date-time">10 GIỜ 10</span>
-                      <span class="date-day">10</span>
-                      <span class="date-month">THÁNG 10</span>
+                  <div class="wedding-calendar-container" id="wedding_calendar">
+                    <div class="calendar-header">
+                      <div class="calendar-title">THÁNG 10 NĂM 2025</div>
+                      <!-- <div class="calendar-subtitle">10h10</div> -->
                     </div>
-                    <div class="date-year">2025</div>
+                    <div class="calendar-grid">
+                      <div class="calendar-weekdays">
+                        <div class="weekday">CN</div>
+                        <div class="weekday">T2</div>
+                        <div class="weekday">T3</div>
+                        <div class="weekday">T4</div>
+                        <div class="weekday">T5</div>
+                        <div class="weekday">T6</div>
+                        <div class="weekday">T7</div>
+                      </div>
+                      <div class="calendar-days">
+                        <!-- Ngày cuối tháng 9 để lấp đầy tuần đầu -->
+                        <div class="calendar-day prev-month">28</div>
+                        <div class="calendar-day prev-month">29</div>
+                        <div class="calendar-day prev-month">30</div>
+                        <!-- Tháng 10/2025 bắt đầu từ thứ 4 -->
+                        <div class="calendar-day">1</div>
+                        <div class="calendar-day">2</div>
+                        <div class="calendar-day">3</div>
+                        <div class="calendar-day">4</div>
+
+                        <div class="calendar-day">5</div>
+                        <div class="calendar-day">6</div>
+                        <div class="calendar-day">7</div>
+                        <div class="calendar-day">8</div>
+                        <div class="calendar-day">9</div>
+                        <div class="calendar-day wedding-day">
+                          <span class="day-number">10</span>
+                          <div class="heart-decoration">♥</div>
+                        </div>
+                        <div class="calendar-day">11</div>
+
+                        <div class="calendar-day">12</div>
+                        <div class="calendar-day">13</div>
+                        <div class="calendar-day">14</div>
+                        <div class="calendar-day">15</div>
+                        <div class="calendar-day">16</div>
+                        <div class="calendar-day">17</div>
+                        <div class="calendar-day">18</div>
+
+                        <div class="calendar-day">19</div>
+                        <div class="calendar-day">20</div>
+                        <div class="calendar-day">21</div>
+                        <div class="calendar-day">22</div>
+                        <div class="calendar-day">23</div>
+                        <div class="calendar-day">24</div>
+                        <div class="calendar-day">25</div>
+
+                        <div class="calendar-day">26</div>
+                        <div class="calendar-day">27</div>
+                        <div class="calendar-day">28</div>
+                        <div class="calendar-day">29</div>
+                        <div class="calendar-day">30</div>
+                        <div class="calendar-day">31</div>
+                        <!-- Ngày đầu tháng 11 để lấp đầy tuần cuối -->
+                        <div class="calendar-day next-month">1</div>
+                      </div>
+                    </div>
                     <style>
-                      #date_display_custom {
+                      #wedding_calendar {
                         width: 100%;
                         max-width: 400px;
                         margin: 20px auto;
                         background: linear-gradient(135deg, #f8f4e6 0%, #fff8e7 50%, #f5f0d8 100%);
                         border: 3px solid #d4af37;
                         border-radius: 15px;
-                        padding: 15px;
+                        padding: 20px;
                         text-align: center;
                         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
                         font-family: 'Times New Roman', serif;
-                      }
-
-                      #date_display_custom .date-header {
-                        font-size: 14px;
-                        font-weight: bold;
-                        color: #8B4513;
-                        margin-bottom: 8px;
-                        letter-spacing: 1px;
-                      }
-
-                      #date_display_custom .date-main {
                         position: relative;
+                        overflow: hidden;
                       }
 
-                      #date_display_custom .date-time {
-                        font-size: 16px;
-                        font-weight: bold;
-                        color: #8B4513;
-                        display: block;
-                        margin-bottom: 5px;
-                        letter-spacing: 1px;
+                      #wedding_calendar::before {
+                        content: '';
+                        position: absolute;
+                        top: -50%;
+                        left: -50%;
+                        width: 200%;
+                        height: 200%;
+                        background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+                        animation: sparkle 4s ease-in-out infinite;
+                        pointer-events: none;
                       }
 
-                      #date_display_custom .date-day {
-                        font-size: 72px;
-                        font-weight: bold;
-                        color: #8B4513;
-                        display: block;
-                        line-height: 0.8;
-                        margin: 10px 0;
-                        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+                      @keyframes sparkle {
+                        0%, 100% { opacity: 0.3; transform: rotate(0deg); }
+                        50% { opacity: 0.7; transform: rotate(180deg); }
                       }
 
-                      #date_display_custom .date-month {
+                      .calendar-header {
+                        margin-bottom: 15px;
+                        position: relative;
+                        z-index: 2;
+                      }
+
+                      .calendar-title {
                         font-size: 18px;
                         font-weight: bold;
                         color: #8B4513;
-                        display: block;
+                        margin-bottom: 5px;
                         letter-spacing: 2px;
-                        margin-top: 5px;
+                        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
                       }
 
-                      #date_display_custom .date-year {
-                        font-size: 24px;
+                      .calendar-subtitle {
+                        font-size: 14px;
+                        color: #8B4513;
+                        font-weight: bold;
+                        letter-spacing: 1px;
+                      }
+
+                      .calendar-grid {
+                        position: relative;
+                        z-index: 2;
+                      }
+
+                      .calendar-weekdays {
+                        display: grid;
+                        grid-template-columns: repeat(7, 1fr);
+                        gap: 2px;
+                        margin-bottom: 8px;
+                      }
+
+                      .weekday {
+                        font-size: 12px;
                         font-weight: bold;
                         color: #8B4513;
-                        margin-top: 10px;
-                        letter-spacing: 3px;
+                        padding: 5px 0;
+                        background: rgba(212, 175, 55, 0.2);
+                        border-radius: 5px;
+                        letter-spacing: 1px;
+                      }
+
+                      .calendar-days {
+                        display: grid;
+                        grid-template-columns: repeat(7, 1fr);
+                        gap: 2px;
+                      }
+
+                      .calendar-day {
+                        aspect-ratio: 1;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: #8B4513;
+                        background: rgba(255, 255, 255, 0.7);
+                        border-radius: 8px;
+                        transition: all 0.3s ease;
+                        position: relative;
+                        cursor: pointer;
+                      }
+
+                      .calendar-day:hover {
+                        background: rgba(212, 175, 55, 0.3);
+                        transform: scale(1.05);
+                      }
+
+                      .calendar-day.prev-month,
+                      .calendar-day.next-month {
+                        color: #bbb;
+                        background: rgba(255, 255, 255, 0.3);
+                      }
+
+                      .calendar-day.wedding-day {
+                        background: linear-gradient(135deg, #d4af37 0%, #f4e4a6 50%, #d4af37 100%);
+                        color: #fff;
+                        font-size: 16px;
+                        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.5);
+                        animation: pulse 2s ease-in-out infinite;
+                        border: 2px solid #fff;
+                        flex-direction: column;
+                      }
+
+                      @keyframes pulse {
+                        0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.5); }
+                        50% { transform: scale(1.1); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.8); }
+                      }
+
+                      .wedding-day .day-number {
+                        font-size: 18px;
+                        font-weight: bold;
+                        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+                      }
+
+                      .heart-decoration {
+                        font-size: 10px;
+                        color: #ff6b6b;
+                        animation: heartbeat 1.5s ease-in-out infinite;
+                        margin-top: -2px;
+                      }
+
+                      @keyframes heartbeat {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.2); }
                       }
 
                       @media (min-width:550px) {
-                        #date_display_custom {
-                          width: 55%;
+                        #wedding_calendar {
+                          width: 70%;
+                          max-width: 500px;
+                        }
+
+                        .calendar-day {
+                          font-size: 16px;
+                          min-height: 40px;
+                        }
+
+                        .weekday {
+                          font-size: 14px;
+                          padding: 8px 0;
+                        }
+
+                        .wedding-day .day-number {
+                          font-size: 20px;
+                        }
+
+                        .heart-decoration {
+                          font-size: 12px;
                         }
                       }
 
                       @media (max-width: 480px) {
-                        #date_display_custom .date-day {
-                          font-size: 60px;
+                        #wedding_calendar {
+                          padding: 15px;
                         }
 
-                        #date_display_custom .date-month {
+                        .calendar-title {
                           font-size: 16px;
                         }
 
-                        #date_display_custom .date-year {
-                          font-size: 20px;
+                        .calendar-subtitle {
+                          font-size: 12px;
+                        }
+
+                        .calendar-day {
+                          font-size: 12px;
+                        }
+
+                        .wedding-day .day-number {
+                          font-size: 16px;
+                        }
+
+                        .heart-decoration {
+                          font-size: 8px;
                         }
                       }
                     </style>
@@ -900,9 +1279,9 @@
                       <div class="img-inner dark">
                         <img decoding="async" width="1177" height="213"
                           src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%201177%20213%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                          data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-9.png"
+                          data-src="down-anh/Timeline-ngang-tung-son-Recovered-9.png"
                           class="lazy-load attachment-original size-original" alt srcset
-                          data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-9.png 1177w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-9-300x54.png 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-9-1024x185.png 1024w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Timeline-ngang-tung-son-Recovered-9-768x139.png 768w"
+                          data-srcset="down-anh/Timeline-ngang-tung-son-Recovered-9.png 1177w"
                           sizes="(max-width: 1177px) 100vw, 1177px" />
                       </div>
                     </div>
@@ -918,7 +1297,7 @@
                       }
                     </style>
                   </div>
-                  <h5>ĐÓN KHÁCH: 09H30<br />KHAI TIỆC: 10H00</h5>
+                  <h5>ĐÓN KHÁCH: 09H30<br />KHAI TIỆC: 10H10</h5>
                 </div>
                 <style>
                   #col-1996769457>.col-inner {
@@ -980,16 +1359,31 @@
                   <div data-animate="fadeInLeft">
                     <div class="img-inner dark">
                       <img decoding="async" width="500" height="700"
-                        src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20500%20700%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/Anh-rieng-co-dau-chu-re.png"
+                        src="JPEG/TRUY6188.jpg"
+                        data-src="JPEG/TRUY6188.jpg"
                         class="lazy-load attachment-original size-original" alt srcset
-                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/Anh-rieng-co-dau-chu-re.png 500w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Anh-rieng-co-dau-chu-re-214x300.png 214w"
+                        data-srcset="JPEG/TRUY6188.jpg 500w"
                         sizes="(max-width: 500px) 100vw, 500px" />
                     </div>
                   </div>
                   <style>
                     #image_563048948 {
                       width: 81%;
+                    }
+
+                    #image_563048948 .img-inner {
+                      border-radius: 50%;
+                      overflow: hidden;
+                      background: linear-gradient(45deg, #fff, #f8f8f8);
+                      padding: 8px;
+                      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    }
+
+                    #image_563048948 img {
+                      border-radius: 50%;
+                      width: 100%;
+                      height: 100%;
+                      object-fit: cover;
                     }
 
                     @media (min-width:550px) {
@@ -1027,9 +1421,9 @@
                   <div class="img-inner dark">
                     <img decoding="async" width="481" height="484"
                       src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20481%20484%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                      data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/Thiet-ke-chua-co-ten-6.png"
+                      data-src="down-anh/Thiet-ke-chua-co-ten-6.png"
                       class="lazy-load attachment-original size-original" alt srcset
-                      data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/Thiet-ke-chua-co-ten-6.png 481w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Thiet-ke-chua-co-ten-6-298x300.png 298w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Thiet-ke-chua-co-ten-6-150x150.png 150w"
+                      data-srcset="down-anh/Thiet-ke-chua-co-ten-6.png 481w"
                       sizes="(max-width: 481px) 100vw, 481px" />
                   </div>
                   <style>
@@ -1046,16 +1440,31 @@
                   <div data-animate="fadeInRight">
                     <div class="img-inner dark">
                       <img decoding="async" width="500" height="700"
-                        src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20500%20700%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/Anh-rieng-co-dau-chu-re-1-2.png"
+                        src="JPEG/TRUY6339.jpg"
+                        data-src="JPEG/TRUY6339.jpg"
                         class="lazy-load attachment-original size-original" alt srcset
-                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/Anh-rieng-co-dau-chu-re-1-2.png 500w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Anh-rieng-co-dau-chu-re-1-2-214x300.png 214w"
+                        data-srcset="JPEG/TRUY6339.jpg 500w"
                         sizes="(max-width: 500px) 100vw, 500px" />
                     </div>
                   </div>
                   <style>
                     #image_1728279608 {
                       width: 81%;
+                    }
+
+                    #image_1728279608 .img-inner {
+                      border-radius: 50%;
+                      overflow: hidden;
+                      background: linear-gradient(45deg, #fff, #f8f8f8);
+                      padding: 8px;
+                      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    }
+
+                    #image_1728279608 img {
+                      border-radius: 50%;
+                      width: 100%;
+                      height: 100%;
+                      object-fit: cover;
                     }
 
                     @media (min-width:550px) {
@@ -1106,7 +1515,7 @@
           }
 
           #section_1314944076 .section-bg.bg-loaded {
-            background-image: url(https://thiepcuoionline.net/wp-content/uploads/2024/06/Hinh-anh-nhan-cuoi-bac-scaled-1.jpg);
+            background-image: url(./anh-nen/nen.jpg);
           }
 
           #section_1314944076 .section-bg {
@@ -1161,7 +1570,7 @@
             <div id="timer-878817529" class="ux-timer dark" data-text-plural="s" data-text-hour="hour"
               data-text-day="ngày" data-text-week="tuần" data-text-min="min" data-text-sec="sec" data-text-hour-p="giờ"
               data-text-day-p="ngày" data-text-week-p="tuần" data-text-min-p="phút" data-text-sec-p="giây"
-              data-countdown="2024/10/13 18:00"><span>&nbsp;<div class="loading-spin dark centered"></div>
+              data-countdown="2025/10/10 10:10"><span>&nbsp;<div class="loading-spin dark centered"></div>
                 <strong>&nbsp;</strong></span></div>
             <style>
               #timer-878817529 {
@@ -1215,9 +1624,9 @@
               <div class="img-inner dark">
                 <img decoding="async" width="882" height="186"
                   src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20882%20186%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                  data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/File-chu-Anh-Khoa-Mai-Anh-10-1-1.png"
+                  data-src="down-anh/File-chu-Anh-Khoa-Mai-Anh-10-1-1.png"
                   class="lazy-load attachment-original size-original" alt srcset
-                  data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/File-chu-Anh-Khoa-Mai-Anh-10-1-1.png 882w, https://thiepcuoionline.net/wp-content/uploads/2024/06/File-chu-Anh-Khoa-Mai-Anh-10-1-1-300x63.png 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/File-chu-Anh-Khoa-Mai-Anh-10-1-1-768x162.png 768w"
+                  data-srcset="down-anh/File-chu-Anh-Khoa-Mai-Anh-10-1-1.png 882w"
                   sizes="(max-width: 882px) 100vw, 882px" />
               </div>
               <style>
@@ -1250,15 +1659,15 @@
                             <div class="col-inner">
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1050970846">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n.jpg">
+                                  href="JPEG/TRUY5372.jpg">
                                   <div data-animate="fadeInLeft">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="1365" height="2048"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%201365%202048%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n.jpg"
+                                        data-src="JPEG/TRUY5372.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n.jpg 1365w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n-200x300.jpg 200w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n-683x1024.jpg 683w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n-768x1152.jpg 768w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337154386_595608239279488_3372273384529000527_n-1024x1536.jpg 1024w"
+                                        data-srcset="JPEG/TRUY5372.jpg 1365w"
                                         sizes="(max-width: 1365px) 100vw, 1365px" />
                                     </div>
                                   </div>
@@ -1271,14 +1680,14 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1403849624">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/336512036_158923720008014_2550171153058962851_n.jpg">
+                                  href="JPEG/TRUY5389.jpg">
                                   <div data-animate="bounceIn">
                                     <div class="img-inner image-cover box-shadow-4-hover dark" style="padding-top:72%;">
                                       <img decoding="async" width="900" height="600"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20900%20600%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/336512036_158923720008014_2550171153058962851_n.jpg"
+                                        data-src="JPEG/TRUY5389.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/336512036_158923720008014_2550171153058962851_n.jpg 900w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336512036_158923720008014_2550171153058962851_n-300x200.jpg 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336512036_158923720008014_2550171153058962851_n-768x512.jpg 768w"
+                                        data-srcset="JPEG/TRUY5389.jpg 900w"
                                         sizes="(max-width: 900px) 100vw, 900px" />
                                     </div>
                                   </div>
@@ -1291,15 +1700,15 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1715890423">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337119140_914680336535934_6640623713189662033_n.jpg">
+                                  href="JPEG/TRUY5433.jpg">
                                   <div data-animate="fadeInRight">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="683" height="1024"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20683%201024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337119140_914680336535934_6640623713189662033_n.jpg"
+                                        data-src="JPEG/TRUY5433.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337119140_914680336535934_6640623713189662033_n.jpg 683w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337119140_914680336535934_6640623713189662033_n-200x300.jpg 200w"
+                                        data-srcset="JPEG/TRUY5433.jpg 683w"
                                         sizes="(max-width: 683px) 100vw, 683px" />
                                     </div>
                                   </div>
@@ -1316,14 +1725,14 @@
                             <div class="col-inner">
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1686451348">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n.jpg">
+                                  href="JPEG/TRUY5453.jpg">
                                   <div data-animate="bounceIn">
                                     <div class="img-inner image-cover box-shadow-4-hover dark" style="padding-top:72%;">
                                       <img decoding="async" width="2048" height="1365"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%202048%201365%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n.jpg"
+                                        data-src="JPEG/TRUY5453.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n.jpg 2048w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n-300x200.jpg 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n-1024x683.jpg 1024w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n-768x512.jpg 768w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337379080_516820773756682_9195336347623394497_n-1536x1024.jpg 1536w"
+                                        data-srcset="JPEG/TRUY5453.jpg 2048w"
                                         sizes="(max-width: 2048px) 100vw, 2048px" />
                                     </div>
                                   </div>
@@ -1336,14 +1745,14 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1142453695">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/336862184_225418409994574_2112547411220799865_n.jpg">
+                                  href="JPEG/TRUY5502.jpg">
                                   <div data-animate="bounceIn">
                                     <div class="img-inner image-cover box-shadow-4-hover dark" style="padding-top:72%;">
                                       <img decoding="async" width="900" height="600"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20900%20600%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/336862184_225418409994574_2112547411220799865_n.jpg"
+                                        data-src="JPEG/TRUY5502.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/336862184_225418409994574_2112547411220799865_n.jpg 900w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336862184_225418409994574_2112547411220799865_n-300x200.jpg 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336862184_225418409994574_2112547411220799865_n-768x512.jpg 768w"
+                                        data-srcset="JPEG/TRUY5502.jpg 900w"
                                         sizes="(max-width: 900px) 100vw, 900px" />
                                     </div>
                                   </div>
@@ -1356,15 +1765,15 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1859064103">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/336896900_520121690292489_6484942814017781263_n.jpg">
+                                  href="JPEG/TRUY5541.jpg">
                                   <div data-animate="bounceIn">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="600" height="900"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20600%20900%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/336896900_520121690292489_6484942814017781263_n.jpg"
+                                        data-src="JPEG/TRUY5541.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/336896900_520121690292489_6484942814017781263_n.jpg 600w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336896900_520121690292489_6484942814017781263_n-200x300.jpg 200w"
+                                        data-srcset="JPEG/TRUY5541.jpg 600w"
                                         sizes="(max-width: 600px) 100vw, 600px" />
                                     </div>
                                   </div>
@@ -1377,14 +1786,14 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_228705122">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/336571096_3524899477780027_9153319667708034262_n.jpg">
+                                  href="JPEG/TRUY5748.jpg">
                                   <div data-animate="bounceInUp">
                                     <div class="img-inner image-cover box-shadow-4-hover dark" style="padding-top:72%;">
                                       <img decoding="async" width="900" height="600"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20900%20600%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/336571096_3524899477780027_9153319667708034262_n.jpg"
+                                        data-src="JPEG/TRUY5748.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/336571096_3524899477780027_9153319667708034262_n.jpg 900w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336571096_3524899477780027_9153319667708034262_n-300x200.jpg 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336571096_3524899477780027_9153319667708034262_n-768x512.jpg 768w"
+                                        data-srcset="JPEG/TRUY5748.jpg 900w"
                                         sizes="(max-width: 900px) 100vw, 900px" />
                                     </div>
                                   </div>
@@ -1401,14 +1810,14 @@
                             <div class="col-inner">
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_865278724">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n.jpg">
+                                  href="JPEG/TRUY5750.jpg">
                                   <div data-animate="fadeInLeft">
                                     <div class="img-inner image-cover box-shadow-4-hover dark" style="padding-top:72%;">
                                       <img decoding="async" width="1365" height="2048"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%201365%202048%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n.jpg"
+                                        data-src="JPEG/TRUY5750.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n.jpg 1365w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n-200x300.jpg 200w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n-683x1024.jpg 683w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n-768x1152.jpg 768w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337417890_1921044728230277_4949600023055900876_n-1024x1536.jpg 1024w"
+                                        data-srcset="JPEG/TRUY5750.jpg 1365w"
                                         sizes="(max-width: 1365px) 100vw, 1365px" />
                                     </div>
                                   </div>
@@ -1421,15 +1830,15 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_899040002">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337151103_1667071560392240_3988199561906405304_n.jpg">
+                                  href="JPEG/TRUY5870.jpg">
                                   <div data-animate="fadeInLeft">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="683" height="1024"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20683%201024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337151103_1667071560392240_3988199561906405304_n.jpg"
+                                        data-src="JPEG/TRUY5870.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337151103_1667071560392240_3988199561906405304_n.jpg 683w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337151103_1667071560392240_3988199561906405304_n-200x300.jpg 200w"
+                                        data-srcset="JPEG/TRUY5870.jpg 683w"
                                         sizes="(max-width: 683px) 100vw, 683px" />
                                     </div>
                                   </div>
@@ -1442,15 +1851,15 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1159728262">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n.jpg">
+                                  href="JPEG/TRUY5945.jpg">
                                   <div data-animate="fadeInLeft">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="600" height="900"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20600%20900%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n.jpg"
+                                        data-src="JPEG/TRUY5945.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n.jpg 600w, https://thiepcuoionline.net/wp-content/uploads/2024/06/336756465_199692869336177_7838883824993871845_n-200x300.jpg 200w"
+                                        data-srcset="JPEG/TRUY5945.jpg 600w"
                                         sizes="(max-width: 600px) 100vw, 600px" />
                                     </div>
                                   </div>
@@ -1467,15 +1876,15 @@
                             <div class="col-inner">
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_638201490">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337013371_6139295179460979_4106223739111031971_n.jpg">
+                                  href="JPEG/TRUY5964.jpg">
                                   <div data-animate="fadeInLeft">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="683" height="1024"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20683%201024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337013371_6139295179460979_4106223739111031971_n.jpg"
+                                        data-src="JPEG/TRUY5964.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337013371_6139295179460979_4106223739111031971_n.jpg 683w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337013371_6139295179460979_4106223739111031971_n-200x300.jpg 200w"
+                                        data-srcset="JPEG/TRUY5964.jpg 683w"
                                         sizes="(max-width: 683px) 100vw, 683px" />
                                     </div>
                                   </div>
@@ -1488,14 +1897,14 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1549030212">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n.jpg">
+                                  href="JPEG/TRUY5993.jpg">
                                   <div data-animate="bounceInUp">
                                     <div class="img-inner image-cover box-shadow-4-hover dark" style="padding-top:72%;">
                                       <img decoding="async" width="2048" height="1365"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%202048%201365%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n.jpg"
+                                        data-src="JPEG/TRUY5993.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n.jpg 2048w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n-300x200.jpg 300w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n-1024x683.jpg 1024w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n-768x512.jpg 768w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337427987_607528444173358_8037067643816332671_n-1536x1024.jpg 1536w"
+                                        data-srcset="JPEG/TRUY5993.jpg 2048w"
                                         sizes="(max-width: 2048px) 100vw, 2048px" />
                                     </div>
                                   </div>
@@ -1508,15 +1917,15 @@
                               </div>
                               <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1272617120">
                                 <a class="image-lightbox lightbox-gallery" title
-                                  href="https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n.jpg">
+                                  href="JPEG/TRUY6024.jpg">
                                   <div data-animate="fadeInLeft">
                                     <div class="img-inner image-cover box-shadow-4-hover dark"
                                       style="padding-top:150%;">
                                       <img decoding="async" width="1365" height="2048"
                                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%201365%202048%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n.jpg"
+                                        data-src="JPEG/TRUY6024.jpg"
                                         class="lazy-load attachment-original size-original" alt srcset
-                                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n.jpg 1365w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n-200x300.jpg 200w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n-683x1024.jpg 683w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n-768x1152.jpg 768w, https://thiepcuoionline.net/wp-content/uploads/2024/06/337517652_136994835980765_8471263648238192253_n-1024x1536.jpg 1024w"
+                                        data-srcset="JPEG/TRUY6024.jpg 1365w"
                                         sizes="(max-width: 1365px) 100vw, 1365px" />
                                     </div>
                                   </div>
@@ -1543,9 +1952,9 @@
                     <div class="img-inner dark">
                       <img decoding="async" width="542" height="123"
                         src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20542%20123%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E"
-                        data-src="https://thiepcuoionline.net/wp-content/uploads/2024/06/Untitled-2.png"
+                        data-src="assets/images/uploads/2024/06/Untitled-2.png"
                         class="lazy-load attachment-original size-original" alt srcset
-                        data-srcset="https://thiepcuoionline.net/wp-content/uploads/2024/06/Untitled-2.png 542w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Untitled-2-300x68.png 300w"
+                        data-srcset="assets/images/uploads/2024/06/Untitled-2.png 542w, https://thiepcuoionline.net/wp-content/uploads/2024/06/Untitled-2-300x68.png 300w"
                         sizes="(max-width: 542px) 100vw, 542px" />
                     </div>
                     <style>
@@ -1614,7 +2023,7 @@
           <div class="col-inner text-center">
             <!-- <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_1427389147"> -->
             <!-- <div class="img-inner dark">
-<img decoding="async" width="500" height="118" src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20500%20118%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E" data-src="https://thiepcuoionline.net/wp-content/uploads/2023/03/Thiet-ke-chua-co-ten-61.png" class="lazy-load attachment-original size-original" alt srcset data-srcset="https://thiepcuoionline.net/wp-content/uploads/2023/03/Thiet-ke-chua-co-ten-61.png 500w, https://thiepcuoionline.net/wp-content/uploads/2023/03/Thiet-ke-chua-co-ten-61-300x71.png 300w" sizes="(max-width: 500px) 100vw, 500px" />
+<img decoding="async" width="500" height="118" src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20500%20118%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E" data-src="assets/images/uploads/2023/03/Thiet-ke-chua-co-ten-61.png" class="lazy-load attachment-original size-original" alt srcset data-srcset="assets/images/uploads/2023/03/Thiet-ke-chua-co-ten-61.png 500w, assets/images/uploads/2023/03/Thiet-ke-chua-co-ten-61-300x71.png 300w" sizes="(max-width: 500px) 100vw, 500px" />
 </div> -->
             <style>
               #image_1427389147 {
@@ -1633,7 +2042,7 @@
         </div>
         <!-- <div class="img has-hover x md-x lg-x y md-y lg-y" id="image_604351220"> -->
         <!-- <div class="img-inner dark">
-<img decoding="async" width="500" height="118" src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20500%20118%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E" data-src="https://thiepcuoionline.net/wp-content/uploads/2023/03/Thiet-ke-chua-co-ten-61.png" class="lazy-load attachment-original size-original" alt srcset data-srcset="https://thiepcuoionline.net/wp-content/uploads/2023/03/Thiet-ke-chua-co-ten-61.png 500w, https://thiepcuoionline.net/wp-content/uploads/2023/03/Thiet-ke-chua-co-ten-61-300x71.png 300w" sizes="(max-width: 500px) 100vw, 500px" />
+<img decoding="async" width="500" height="118" src="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20500%20118%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E" data-src="assets/images/uploads/2023/03/Thiet-ke-chua-co-ten-61.png" class="lazy-load attachment-original size-original" alt srcset data-srcset="assets/images/uploads/2023/03/Thiet-ke-chua-co-ten-61.png 500w, assets/images/uploads/2023/03/Thiet-ke-chua-co-ten-61-300x71.png 300w" sizes="(max-width: 500px) 100vw, 500px" />
 </div> -->
         <style>
           #image_604351220 {
@@ -1671,10 +2080,10 @@
   </div>
 
   <link rel="stylesheet" id="flatsome-effects-css"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/css/effects.css?ver=3.15.7" type="text/css"
+    href="assets/css/themes/flatsome/assets/css/effects.css" type="text/css"
     media="all" />
   <link rel="stylesheet" id="flatsome-countdown-style-css"
-    href="https://thiepcuoionline.net/wp-content/themes/flatsome/inc/shortcodes/ux_countdown/ux-countdown.css?ver=6.4.1"
+    href="assets/css/themes/flatsome/inc/shortcodes/ux_countdown/ux-countdown.css"
     type="text/css" media="all" />
   <style id="global-styles-inline-css" type="text/css">
     body {
@@ -2018,7 +2427,7 @@
     }
   </style>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/plugins/contact-form-7/includes/swv/js/index.js?ver=5.7.4"
+    src="assets/js/plugins/contact-form-7/includes/swv/js/index.js"
     id="swv-js"></script>
   <script type="text/javascript" id="contact-form-7-js-extra">
     /* <![CDATA[ */
@@ -2026,18 +2435,18 @@
     /* ]]> */
   </script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/plugins/contact-form-7/includes/js/index.js?ver=5.7.4"
+    src="assets/js/plugins/contact-form-7/includes/js/index.js"
     id="contact-form-7-js"></script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-includes/js/dist/vendor/wp-polyfill-inert.min.js?ver=3.1.2"
+    src="assets/js/wp-includes/js/dist/vendor/wp-polyfill-inert.min.js"
     id="wp-polyfill-inert-js"></script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-includes/js/dist/vendor/regenerator-runtime.min.js?ver=0.14.0"
+    src="assets/js/wp-includes/js/dist/vendor/regenerator-runtime.min.js"
     id="regenerator-runtime-js"></script>
   <script type="text/javascript"
     src="https://thiepcuoionline.net/wp-includes/js/dist/vendor/wp-polyfill.min.js?ver=3.15.0"
     id="wp-polyfill-js"></script>
-  <script type="text/javascript" src="https://thiepcuoionline.net/wp-includes/js/hoverIntent.min.js?ver=1.10.2"
+  <script type="text/javascript" src="js/hoverIntent.min.js"
     id="hoverIntent-js"></script>
   <script type="text/javascript" id="flatsome-js-js-extra">
     /* <![CDATA[ */
@@ -2045,19 +2454,19 @@
     /* ]]> */
   </script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/themes/flatsome/assets/js/flatsome.js?ver=2ba06bae7e21001b4413f16ac4e08981"
+    src="js/flatsome.js"
     id="flatsome-js-js"></script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/themes/flatsome/inc/extensions/flatsome-lazy-load/flatsome-lazy-load.js?ver=3.15.7"
+    src="js/flatsome-lazy-load.js"
     id="flatsome-lazy-js"></script>
   <!--[if IE]>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/intersection-observer-polyfill@0.1.0/dist/IntersectionObserver.js?ver=0.1.0" id="intersection-observer-polyfill-js"></script>
+<script type="text/javascript" src="js/IntersectionObserver.js" id="intersection-observer-polyfill-js"></script>
 <![endif]-->
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/themes/flatsome/inc/shortcodes/ux_countdown/countdown-script-min.js?ver=6.4.1"
+    src="js/countdown-script-min.js"
     id="flatsome-countdown-script-js"></script>
   <script type="text/javascript"
-    src="https://thiepcuoionline.net/wp-content/themes/flatsome/inc/shortcodes/ux_countdown/ux-countdown.js?ver=3.2.6"
+    src="js/ux-countdown.js"
     id="flatsome-countdown-theme-js-js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-M9V8W6N5WY"></script>
   <script>

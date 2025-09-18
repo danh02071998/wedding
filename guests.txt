@@ -1,0 +1,14 @@
+# Guest List for Wedding Invitation
+# Format: code=Full Name
+# Example: daniel=Hoàng Danh
+
+daniel=Hoàng Danh
+john=Nguyễn Văn An
+mary=Trần Thị Bình
+peter=Lê Văn Cường
+anna=Phạm Thị Dung
+michael=Võ Minh Tuấn
+sarah=Nguyễn Thị Lan
+david=Trần Văn Đức
+lisa=Lê Thị Mai
+robert=Phạm Văn Nam

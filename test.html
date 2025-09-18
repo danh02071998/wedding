@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Name Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #993300;
+        }
+        .guest-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .guest-link {
+            background: #993300;
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-align: center;
+            transition: background 0.3s;
+        }
+        .guest-link:hover {
+            background: #cc4400;
+            color: white;
+        }
+        .status {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎉 Wedding Invitation - Guest Name System Test</h1>
+    
+    <div class="test-section">
+        <h2>📝 How it works:</h2>
+        <ol>
+            <li>Add guest codes and names to <code>guests.txt</code></li>
+            <li>Use URL parameter <code>?g=guestcode</code> to personalize the invitation</li>
+            <li>The system will replace "Quý khách" with the guest's actual name</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 Test Links:</h2>
+        <div class="guest-links">
+            <a href="index.html" class="guest-link">Default (Quý khách)</a>
+            <a href="index.html?g=daniel" class="guest-link">Daniel → Hoàng Danh</a>
+            <a href="index.html?g=john" class="guest-link">John → Nguyễn Văn An</a>
+            <a href="index.html?g=mary" class="guest-link">Mary → Trần Thị Bình</a>
+            <a href="index.html?g=peter" class="guest-link">Peter → Lê Văn Cường</a>
+            <a href="index.html?g=anna" class="guest-link">Anna → Phạm Thị Dung</a>
+            <a href="index.html?g=invalid" class="guest-link">Invalid Code</a>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>💾 Current Guest Database:</h2>
+        <div id="guest-list">Loading...</div>
+    </div>
+
+    <div class="status">
+        <h3>🔍 Debug Information:</h3>
+        <div id="debug-info">
+            <p><strong>Current URL:</strong> <span id="current-url"></span></p>
+            <p><strong>Guest Code:</strong> <span id="guest-code"></span></p>
+            <p><strong>Expected Name:</strong> <span id="expected-name"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Update debug info
+        function updateDebugInfo() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const guestCode = urlParams.get('g');
+            
+            document.getElementById('current-url').textContent = window.location.href;
+            document.getElementById('guest-code').textContent = guestCode || 'None';
+            document.getElementById('expected-name').textContent = guestCode ? `Check guests.txt for "${guestCode}"` : 'Default "Quý khách"';
+        }
+
+        // Load and display guest list
+        async function loadGuestList() {
+            try {
+                // If guestHandler is available from the main page, use it
+                if (window.guestHandler) {
+                    const guests = window.guestHandler.getAllGuests();
+                    displayGuestList(guests);
+                    return;
+                }
+                
+                // Otherwise, try to load from file or use embedded data
+                let guestData = [];
+                
+                try {
+                    // Try to load from file if not on file:// protocol
+                    if (window.location.protocol !== 'file:') {
+                        const response = await fetch('guests.txt');
+                        const text = await response.text();
+                        const lines = text.split('\n');
+                        
+                        lines.forEach(line => {
+                            const trimmedLine = line.trim();
+                            if (trimmedLine && !trimmedLine.startsWith('#')) {
+                                const [code, name] = trimmedLine.split('=');
+                                if (code && name) {
+                                    guestData.push({ code: code.trim(), name: name.trim() });
+                                }
+                            }
+                        });
+                    } else {
+                        throw new Error('File protocol detected');
+                    }
+                } catch (fileError) {
+                    // Use embedded data as fallback
+                    guestData = [
+                        { code: 'daniel', name: 'Hoàng Danh' },
+                        { code: 'john', name: 'Nguyễn Văn An' },
+                        { code: 'mary', name: 'Trần Thị Bình' },
+                        { code: 'peter', name: 'Lê Văn Cường' },
+                        { code: 'anna', name: 'Phạm Thị Dung' },
+                        { code: 'michael', name: 'Võ Minh Tuấn' },
+                        { code: 'sarah', name: 'Nguyễn Thị Lan' },
+                        { code: 'david', name: 'Trần Văn Đức' },
+                        { code: 'lisa', name: 'Lê Thị Mai' },
+                        { code: 'robert', name: 'Phạm Văn Nam' }
+                    ];
+                    console.log('Using embedded guest data for test page');
+                }
+                
+                displayGuestList(guestData);
+                
+            } catch (error) {
+                document.getElementById('guest-list').innerHTML = `<p style="color: red;">Error loading guest list: ${error.message}</p>`;
+            }
+        }
+        
+        function displayGuestList(guests) {
+            let guestListHtml = '<ul>';
+            
+            guests.forEach(guest => {
+                guestListHtml += `<li><code>${guest.code}</code> → ${guest.name}</li>`;
+            });
+            
+            guestListHtml += '</ul>';
+            guestListHtml = `<p>Total guests: <strong>${guests.length}</strong></p>` + guestListHtml;
+            
+            document.getElementById('guest-list').innerHTML = guestListHtml;
+        }
+
+        // Initialize
+        updateDebugInfo();
+        loadGuestList();
+    </script>
+</body>
+</html>
